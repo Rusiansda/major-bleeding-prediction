@@ -72,14 +72,3 @@ streamlit run major_bleeding_web_deploy.py
 
 本系统仅供学术研究使用，预测结果仅供参考，不构成医疗建议。临床决策应结合专业医生的判断。
 
-## 📄 许可证
-
-MIT License
-
-## 👥 贡献
-
-欢迎提交 Issue 和 Pull Request！
-
-## 📧 联系方式
-
-如有问题，请联系：your-email@example.com
