@@ -1,0 +1,3 @@
+Trigger redeploy - Model updated to 18 features version
+Date: 2026-03-23
+Features: Age, Temperature, Systolic_BP, GCS_Score, WBC, HGB, HCT, PLT, INR, Fibrinogen, ALT, Creatinine, BUN, Oxygen_Concentration, Partial_Pressure_Of_Oxygen, Serum_Calcium, AG_Ratio, PT_INR_Product
