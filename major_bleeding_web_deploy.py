@@ -107,37 +107,35 @@ def scale_features(feature_values, feature_names, scaler, continuous_vars):
     return result
 
 # ============== 特征定义 ==============
-# 基础输入特征（18个）
+# 基础输入特征（15个）- 对应最终模型的输入变量
 BASE_FEATURES = {
+    "Age": {"label": "年龄 (岁)", "type": "numerical", "min": 18, "max": 100, "default": 60, "step": 1},
     "Temperature": {"label": "体温 (°C)", "type": "numerical", "min": 32.0, "max": 42.0, "default": 37.0, "step": 0.1},
     "Systolic_BP": {"label": "收缩压 (mmHg)", "type": "numerical", "min": 0, "max": 250, "default": 120, "step": 1},
-    "Diastolic_BP": {"label": "舒张压 (mmHg)", "type": "numerical", "min": 0, "max": 150, "default": 80, "step": 1},
-    "Urinary_Tract_Infection": {"label": "尿路感染", "type": "categorical", "options": [0, 1], "labels": ["无", "有"], "default": 0},
-    "Malignancy_Or_Immunosuppression": {"label": "恶性肿瘤/免疫抑制", "type": "categorical", "options": [0, 1], "labels": ["无", "有"], "default": 0},
-    "Respiratory_Rate": {"label": "呼吸频率 (次/分)", "type": "numerical", "min": 0, "max": 80, "default": 20, "step": 1},
     "GCS_Score": {"label": "GCS评分 (3-15)", "type": "numerical", "min": 3, "max": 15, "default": 15, "step": 1},
     "WBC": {"label": "白细胞 (×10⁹/L)", "type": "numerical", "min": 0.1, "max": 100, "default": 8.0, "step": 0.1},
     "HGB": {"label": "血红蛋白 (g/L)", "type": "numerical", "min": 20, "max": 220, "default": 110, "step": 1},
+    "HCT": {"label": "红细胞压积 (%)", "type": "numerical", "min": 10, "max": 60, "default": 35, "step": 0.1},
     "PLT": {"label": "血小板 (×10⁹/L)", "type": "numerical", "min": 1, "max": 1100, "default": 180, "step": 1},
+    "INR": {"label": "国际标准化比值 (INR)", "type": "numerical", "min": 0.5, "max": 15, "default": 1.0, "step": 0.1},
     "Fibrinogen": {"label": "纤维蛋白原 (g/L)", "type": "numerical", "min": 0.1, "max": 15, "default": 3.0, "step": 0.1},
     "ALT": {"label": "谷丙转氨酶 (U/L)", "type": "numerical", "min": 1, "max": 6500, "default": 30, "step": 1},
-    "TBIL": {"label": "总胆红素 (μmol/L)", "type": "numerical", "min": 1, "max": 500, "default": 15, "step": 1},
-    "Globulin": {"label": "球蛋白 (g/L)", "type": "numerical", "min": 5, "max": 60, "default": 30, "step": 1},
     "Creatinine": {"label": "肌酐 (μmol/L)", "type": "numerical", "min": 5, "max": 1800, "default": 80, "step": 1},
     "BUN": {"label": "尿素氮 (mmol/L)", "type": "numerical", "min": 0.5, "max": 50, "default": 6.0, "step": 0.1},
     "Oxygen_Concentration": {"label": "吸入氧浓度 (%)", "type": "numerical", "min": 21, "max": 100, "default": 21, "step": 1},
     "Partial_Pressure_Of_Oxygen": {"label": "氧分压 (mmHg)", "type": "numerical", "min": 20, "max": 530, "default": 90, "step": 1},
-    "Serum_Potassium": {"label": "血钾 (mmol/L)", "type": "numerical", "min": 1.5, "max": 14.5, "default": 4.0, "step": 0.1},
-    "Albumin": {"label": "白蛋白 (g/L)", "type": "numerical", "min": 10, "max": 60, "default": 35, "step": 1},
-    "HCT": {"label": "红细胞压积 (%)", "type": "numerical", "min": 10, "max": 60, "default": 35, "step": 0.1},
+    "Serum_Calcium": {"label": "血钙 (mmol/L)", "type": "numerical", "min": 0.5, "max": 5, "default": 2.3, "step": 0.1},
 }
 
-# 模型特征列表（固定顺序，20个特征）- 必须与训练时顺序一致
+# 模型特征列表（固定顺序，18个特征）- 必须与训练时顺序一致
+# 最终模型特征: Age, Temperature, Systolic_BP, GCS_Score, WBC, HGB, HCT, PLT, 
+#               INR, Fibrinogen, ALT, Creatinine, BUN, Oxygen_Concentration, 
+#               Partial_Pressure_Of_Oxygen, Serum_Calcium, AG_Ratio, PT_INR_Product
 MODEL_FEATURES = [
-    'TBIL', 'Oxygen_Concentration', 'ALT', 'Respiratory_Rate', 'GCS_Score', 
-    'HCT', 'Globulin', 'Systolic_BP', 'Fibrinogen', 'Malignancy_Or_Immunosuppression', 
-    'BUN', 'WBC', 'Creatinine', 'Pulse_Pressure', 'Urinary_Tract_Infection', 
-    'Temperature', 'Serum_Potassium', 'PLT', 'AG_Ratio', 'HGB'
+    'Age', 'Temperature', 'Systolic_BP', 'GCS_Score', 'WBC', 'HGB', 
+    'HCT', 'PLT', 'INR', 'Fibrinogen', 'ALT', 'Creatinine', 'BUN', 
+    'Oxygen_Concentration', 'Partial_Pressure_Of_Oxygen', 'Serum_Calcium', 
+    'AG_Ratio', 'PT_INR_Product'
 ]
 
 # ============== 特征工程函数 ==============
@@ -146,42 +144,44 @@ def calculate_derived_features(base_values):
     derived = {}
     
     # AG_Ratio: 白球比 = 白蛋白 / 球蛋白
-    albumin = base_values.get("Albumin", 35)
-    globulin = base_values.get("Globulin", 30)
+    # 使用默认值计算，因为最终模型中包含AG_Ratio
+    albumin = 35  # 白蛋白默认值
+    globulin = 30  # 球蛋白默认值
     if globulin > 0:
         derived["AG_Ratio"] = albumin / globulin
     else:
         derived["AG_Ratio"] = 1.17  # 默认值
     
-    # Pulse_Pressure: 脉压 = 收缩压 - 舒张压
-    derived["Pulse_Pressure"] = base_values["Systolic_BP"] - base_values["Diastolic_BP"]
+    # PT_INR_Product: PT * INR 的乘积特征
+    # PT (凝血酶原时间) 使用默认值
+    pt_default = 12  # PT 正常值约 11-14 秒
+    inr = base_values.get("INR", 1.0)
+    derived["PT_INR_Product"] = pt_default * inr
     
     return derived
 
 def prepare_features_for_model(base_values, derived_values):
     """准备模型输入特征（按MODEL_FEATURES顺序）"""
     features = {}
-    # 按训练时的特征顺序准备（20个特征）
-    features["TBIL"] = base_values["TBIL"]
-    features["Oxygen_Concentration"] = base_values["Oxygen_Concentration"]
-    features["ALT"] = base_values["ALT"]
-    features["Respiratory_Rate"] = base_values["Respiratory_Rate"]
-    features["GCS_Score"] = base_values["GCS_Score"]
-    features["HCT"] = base_values["HCT"]
-    features["Globulin"] = base_values["Globulin"]
-    features["Systolic_BP"] = base_values["Systolic_BP"]
-    features["Fibrinogen"] = base_values["Fibrinogen"]
-    features["Malignancy_Or_Immunosuppression"] = base_values["Malignancy_Or_Immunosuppression"]
-    features["BUN"] = base_values["BUN"]
-    features["WBC"] = base_values["WBC"]
-    features["Creatinine"] = base_values["Creatinine"]
-    features["Pulse_Pressure"] = derived_values["Pulse_Pressure"]
-    features["Urinary_Tract_Infection"] = base_values["Urinary_Tract_Infection"]
+    # 按训练时的特征顺序准备（18个特征）
+    features["Age"] = base_values["Age"]
     features["Temperature"] = base_values["Temperature"]
-    features["Serum_Potassium"] = base_values["Serum_Potassium"]
-    features["PLT"] = base_values["PLT"]
-    features["AG_Ratio"] = derived_values["AG_Ratio"]
+    features["Systolic_BP"] = base_values["Systolic_BP"]
+    features["GCS_Score"] = base_values["GCS_Score"]
+    features["WBC"] = base_values["WBC"]
     features["HGB"] = base_values["HGB"]
+    features["HCT"] = base_values["HCT"]
+    features["PLT"] = base_values["PLT"]
+    features["INR"] = base_values["INR"]
+    features["Fibrinogen"] = base_values["Fibrinogen"]
+    features["ALT"] = base_values["ALT"]
+    features["Creatinine"] = base_values["Creatinine"]
+    features["BUN"] = base_values["BUN"]
+    features["Oxygen_Concentration"] = base_values["Oxygen_Concentration"]
+    features["Partial_Pressure_Of_Oxygen"] = base_values["Partial_Pressure_Of_Oxygen"]
+    features["Serum_Calcium"] = base_values["Serum_Calcium"]
+    features["AG_Ratio"] = derived_values["AG_Ratio"]
+    features["PT_INR_Product"] = derived_values["PT_INR_Product"]
     
     return [features[f] for f in MODEL_FEATURES]
 
@@ -189,7 +189,7 @@ def prepare_features_for_model(base_values, derived_values):
 def main():
     # 标题
     st.title("🏥 消化道大出血风险预测系统")
-    st.markdown("基于 CatBoost 机器学习模型 | 验证集 AUC = 0.886 (95% CI: 0.840-0.930)")
+    st.markdown("基于 CatBoost 机器学习模型 | 验证集 AUC = 0.834 (95% CI: 0.782-0.884)")
     st.markdown("---")
     
     # 加载模型和标准化器
@@ -211,7 +211,7 @@ def main():
     # 侧边栏信息
     st.sidebar.header("⚙️ 模型信息")
     st.sidebar.info("当前模型: CatBoost")
-    st.sidebar.info("验证集性能:\n- AUC: 0.886\n- 敏感度: 90.2%\n- 特异度: 72.3%\n- NPV: 99.7%")
+    st.sidebar.info("验证集性能:\n- AUC: 0.834\n- 敏感度: 34.1%\n- 特异度: 95.5%\n- NPV: 98.6%")
     
     with st.sidebar.expander("📖 使用说明"):
         st.markdown("""
