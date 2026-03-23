@@ -234,7 +234,7 @@ def main():
     with col1:
         st.subheader("🫀 生命体征")
         for feature, config in BASE_FEATURES.items():
-            if feature in ["Temperature", "Respiratory_Rate", "GCS_Score", "Systolic_BP", "Diastolic_BP"]:
+            if feature in ["Temperature", "Systolic_BP", "GCS_Score", "Age", "Oxygen_Concentration"]:
                 if config["type"] == "numerical":
                     base_values[feature] = st.number_input(
                         config["label"],
@@ -281,10 +281,10 @@ def main():
         col_d1, col_d2 = st.columns(2)
         with col_d1:
             st.metric("白球比 (AG Ratio)", f"{derived_values['AG_Ratio']:.2f}",
-                     help="白蛋白/球蛋白比值")
+                     help="白蛋白/球蛋白比值（默认值计算）")
         with col_d2:
-            st.metric("脉压 (Pulse Pressure)", f"{derived_values['Pulse_Pressure']:.0f} mmHg",
-                     help="收缩压 - 舒张压")
+            st.metric("PT-INR乘积", f"{derived_values['PT_INR_Product']:.1f}",
+                     help="凝血酶原时间 × INR（PT默认12秒）")
     
     # 预测按钮
     st.markdown("---")
