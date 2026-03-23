@@ -346,12 +346,12 @@ def main():
                 with col_r2:
                     st.markdown("### 🎯 预测结果")
                     
-                    # 风险等级判断
-                    if risk_probability < 5:
+                    # 风险等级判断（临床标准）
+                    if risk_probability < 10:
                         risk_level = "低风险"
                         risk_color = "green"
                         bg_color = "#e8f5e9"
-                    elif risk_probability < 15:
+                    elif risk_probability < 30:
                         risk_level = "中风险"
                         risk_color = "orange"
                         bg_color = "#fff3e0"
@@ -371,11 +371,11 @@ def main():
                     
                     # 风险解读
                     if risk_color == "red":
-                        st.error("⚠️ **高风险提示**: 该患者发生消化道大出血的风险较高，建议立即采取预防措施并密切监测。")
+                        st.error("⚠️ **高风险提示**: 该患者发生消化道大出血的风险较高（≥30%），建议立即采取预防措施并密切监测。")
                     elif risk_color == "orange":
-                        st.warning("⚡ **中风险提示**: 该患者存在一定程度的出血风险，建议加强观察和评估。")
+                        st.warning("⚡ **中风险提示**: 该患者存在一定程度的出血风险（10%-30%），建议加强观察和评估。")
                     else:
-                        st.success("✅ **低风险**: 该患者发生消化道大出血的风险相对较低，但仍需常规监测。")
+                        st.success("✅ **低风险**: 该患者发生消化道大出血的风险相对较低（<10%），但仍需常规监测。")
                 
                 # ========== SHAP 解释 ==========
                 st.markdown("---")
