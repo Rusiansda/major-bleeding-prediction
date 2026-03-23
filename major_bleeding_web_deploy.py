@@ -318,14 +318,24 @@ def main():
         
         with st.spinner("正在进行预测分析..."):
             try:
-                # ========== 预测（使用校准后模型） ==========
-                # 使用带列名的 DataFrame 进行预测（CatBoost 需要特征名）
-                prediction_proba = cal_model.predict_proba(input_df)[0]
-                prediction_class = cal_model.predict(input_df)[0]
+                # ========== 预测 ==========
+                # 使用原始模型获取未校准的概率（更稳定的预测）
+                if orig_model is not None:
+                    raw_proba = orig_model.predict_proba(input_df)[0]
+                    prediction_proba = raw_proba
+                    st.sidebar.info(f"使用原始模型预测 (未校准)")
+                else:
+                    # 备用：使用校准模型
+                    prediction_proba = cal_model.predict_proba(input_df)[0]
+                    st.sidebar.info(f"使用校准模型预测")
+                
+                prediction_class = 1 if prediction_proba[1] > 0.5 else 0
                 
                 # 调试信息：显示原始预测概率
                 with st.expander("🔍 调试信息：原始预测输出"):
                     st.write(f"predict_proba 输出: {prediction_proba}")
+                    st.write(f"类别 0 概率: {prediction_proba[0]:.4f}")
+                    st.write(f"类别 1 概率: {prediction_proba[1]:.4f}")
                     st.write(f"predict 输出: {prediction_class}")
                 
                 risk_probability = prediction_proba[1] * 100
