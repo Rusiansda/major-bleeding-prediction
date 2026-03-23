@@ -24,13 +24,24 @@ st.set_page_config(
 )
 
 # ============== 加载模型 ==============
-@st.cache_resource
-def load_model():
+# 模型版本标记 - 修改此值可强制刷新缓存
+MODEL_VERSION = "v2-18features-20250323"
+
+@st.cache_resource(hash_funcs={"_thread.RLock": lambda _: None}, show_spinner=False)
+def load_model(_version=MODEL_VERSION):
     """加载 CatBoost 模型（校准后用于预测，提取原始基学习器用于SHAP）"""
     # 加载校准模型（用于预测）
     cal_model_path = "model_CatBoost_calibrated.pkl"
     with open(cal_model_path, 'rb') as f:
         cal_model = pickle.load(f)
+    
+    # 调试：显示模型特征信息
+    if hasattr(cal_model, 'base_model') and hasattr(cal_model.base_model, 'feature_names_'):
+        feature_names = cal_model.base_model.feature_names_
+        st.sidebar.info(f"模型特征数: {len(feature_names)}")
+        st.sidebar.info(f"首个特征: {feature_names[0]}")
+        if feature_names[0] != "Age":
+            st.sidebar.error(f"警告: 模型期望的首个特征是 Age，但实际是 {feature_names[0]}")
     
     # 提取原始 CatBoost 模型（用于SHAP解释）
     orig_model = None
@@ -194,7 +205,7 @@ def main():
     
     # 加载模型和标准化器
     try:
-        cal_model, orig_model = load_model()
+        cal_model, orig_model = load_model(MODEL_VERSION)
         scaler, continuous_vars = load_scaler()
         st.sidebar.success("✅ 模型加载成功")
         if scaler is not None:
