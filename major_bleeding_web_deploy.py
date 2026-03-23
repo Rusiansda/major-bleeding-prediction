@@ -245,20 +245,6 @@ def main():
                         key=feature
                     )
         
-        st.subheader("🧬 合并症")
-        for feature, config in BASE_FEATURES.items():
-            if feature in ["Urinary_Tract_Infection", "Malignancy_Or_Immunosuppression"]:
-                options = config["options"]
-                labels = config.get("labels", [str(o) for o in options])
-                idx = options.index(config["default"]) if config["default"] in options else 0
-                selected_label = st.selectbox(
-                    config["label"],
-                    options=labels,
-                    index=idx,
-                    key=feature
-                )
-                base_values[feature] = options[labels.index(selected_label)]
-    
     with col2:
         st.subheader("🧪 实验室检查")
         for feature, config in BASE_FEATURES.items():
