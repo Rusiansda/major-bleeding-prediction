@@ -76,7 +76,7 @@ def add_derived_variables(data):
             data_derived['Partial_Pressure_Of_Oxygen'] / 
             (data_derived['Oxygen_Concentration'] / 100 + 1e-6)
         ).round(1).clip(lower=0, upper=1000)
-        print("  ✓ PaO2/FiO2 Ratio - Berlin Definition (JAMA 2012)")
+        print("  [OK] PaO2/FiO2 Ratio - Berlin Definition (JAMA 2012)")
         derived_count += 1
     
     # 2. BUN/Cr比值
@@ -84,214 +84,52 @@ def add_derived_variables(data):
         data_derived['BUN_Crea_Ratio'] = (
             data_derived['BUN'] / (data_derived['Creatinine'] + 1e-6)
         ).round(1).clip(lower=0, upper=500)
-        print("  ✓ BUN/Cr Ratio - Srygley et al. (JAMA 2012)")
+        print("  [OK] BUN/Cr Ratio - Srygley et al. (JAMA 2012)")
         derived_count += 1
     
-    # 3. 体质指数 BMI
-    if 'Height' in data_derived.columns and 'Weight' in data_derived.columns:
-        data_derived['BMI'] = (
-            data_derived['Weight'] / ((data_derived['Height'] / 100 + 1e-6) ** 2)
-        ).round(1).clip(lower=10, upper=60)
-        print("  ✓ BMI - WHO Classification (2000)")
-        derived_count += 1
-    
-    # 4. 白蛋白/球蛋白比值 (A/G Ratio)
+    # 3. 白蛋白/球蛋白比值 (A/G Ratio)
     if 'Albumin' in data_derived.columns and 'Globulin' in data_derived.columns:
         data_derived['AG_Ratio'] = (
             data_derived['Albumin'] / (data_derived['Globulin'] + 1e-6)
         ).round(2).clip(lower=0, upper=5)
-        print("  ✓ A/G Ratio - Duran et al. (Critical Care 2014)")
+        print("  [OK] A/G Ratio - Duran et al. (Critical Care 2014)")
         derived_count += 1
     
-    # 5. 平均动脉压 MAP
+    # 4. 平均动脉压 MAP
     if 'Systolic_BP' in data_derived.columns and 'Diastolic_BP' in data_derived.columns:
         data_derived['MAP'] = (
             (data_derived['Systolic_BP'] + 2 * data_derived['Diastolic_BP']) / 3
         ).round(0).clip(lower=30, upper=200)
-        print("  ✓ MAP - Surviving Sepsis Campaign (Crit Care 2013)")
+        print("  [OK] MAP - Surviving Sepsis Campaign (Crit Care 2013)")
         derived_count += 1
     
-    # 6. 休克指数 (Shock Index = HR/SBP)
+    # 5. 休克指数 (Shock Index = HR/SBP)
     if 'Heart_Rate' in data_derived.columns and 'Systolic_BP' in data_derived.columns:
         data_derived['Shock_Index'] = (
             data_derived['Heart_Rate'] / (data_derived['Systolic_BP'] + 1e-6)
         ).round(2).clip(lower=0, upper=5)
-        print("  ✓ Shock Index - Birkhahn et al. (Am J Emerg Med 2005)")
+        print("  [OK] Shock Index - Birkhahn et al. (Am J Emerg Med 2005)")
         derived_count += 1
     
-    # 7. 脉压 (Pulse Pressure)
+    # 6. 脉压 (Pulse Pressure)
     if 'Systolic_BP' in data_derived.columns and 'Diastolic_BP' in data_derived.columns:
         data_derived['Pulse_Pressure'] = (
             data_derived['Systolic_BP'] - data_derived['Diastolic_BP']
         ).round(0).clip(lower=10, upper=150)
-        print("  ✓ Pulse Pressure - Blacher et al. (Hypertension 2000)")
+        print("  [OK] Pulse Pressure - Blacher et al. (Hypertension 2000)")
         derived_count += 1
     
-    # 8. 修正钙 (Corrected Calcium)
-    if 'Serum_Calcium' in data_derived.columns and 'Albumin' in data_derived.columns:
-        data_derived['Corrected_Calcium'] = (
-            data_derived['Serum_Calcium'] + 0.02 * (40 - data_derived['Albumin'])
-        ).round(2).clip(lower=1.0, upper=4.0)
-        print("  ✓ Corrected Calcium - Payne et al. (BMJ 1973)")
-        derived_count += 1
-    
-    # 9. 血小板与淋巴细胞比值 (PLR)
+    # 7. 血小板与淋巴细胞比值 (PLR)
     if 'PLT' in data_derived.columns and 'WBC' in data_derived.columns:
         estimated_lymphocytes = data_derived['WBC'] * 0.3
         data_derived['PLR'] = (
             data_derived['PLT'] / (estimated_lymphocytes + 1e-6)
         ).round(1).clip(lower=0, upper=1000)
-        print("  ✓ PLR - Guo et al. (Medicine 2019)")
-        derived_count += 1
-    
-    # 10. PT-INR乘积
-    if 'PT' in data_derived.columns and 'INR' in data_derived.columns:
-        data_derived['PT_INR_Product'] = (
-            data_derived['PT'] * data_derived['INR']
-        ).round(2).clip(lower=0, upper=200)
-        print("  ✓ PT-INR Product - Coagulation Function Index")
+        print("  [OK] PLR - Guo et al. (Medicine 2019)")
         derived_count += 1
     
     print(f"\n  📚 Total derived variables created: {derived_count}")
     return data_derived
-
-
-def add_clinical_bins(data):
-    """Create binned features based on clinical thresholds"""
-    data_binned = data.copy()
-    bins_count = 0
-    
-    # APACHE II Score Classification
-    if 'APACHEII_Score' in data_binned.columns:
-        data_binned['APACHE_Risk'] = pd.cut(data_binned['APACHEII_Score'], 
-                                             bins=[-np.inf, 10, 20, 30, np.inf],
-                                             labels=[0, 1, 2, 3]).astype(int)
-        bins_count += 1
-    
-    # SOFA Score Classification
-    if 'SOFA_Score' in data_binned.columns:
-        data_binned['SOFA_Risk'] = pd.cut(data_binned['SOFA_Score'],
-                                          bins=[-np.inf, 5, 10, 15, np.inf],
-                                          labels=[0, 1, 2, 3]).astype(int)
-        bins_count += 1
-    
-    # Age Groups
-    if 'Age' in data_binned.columns:
-        data_binned['Age_Group'] = pd.cut(data_binned['Age'],
-                                          bins=[-np.inf, 45, 60, 75, np.inf],
-                                          labels=[0, 1, 2, 3]).astype(int)
-        bins_count += 1
-    
-    # Shock Index Classification
-    if 'Shock_Index' in data_binned.columns:
-        data_binned['Shock_Severity'] = pd.cut(data_binned['Shock_Index'],
-                                               bins=[-np.inf, 0.6, 1.0, 1.4, np.inf],
-                                               labels=[0, 1, 2, 3]).astype(int)
-        bins_count += 1
-    
-    # PaO2/FiO2 Ratio Classification
-    if 'PaO2_FiO2_Ratio' in data_binned.columns:
-        data_binned['ARDS_Severity'] = pd.cut(data_binned['PaO2_FiO2_Ratio'],
-                                              bins=[-np.inf, 100, 200, 300, np.inf],
-                                              labels=[3, 2, 1, 0]).astype(int)
-        bins_count += 1
-    
-    # Platelet Count Classification
-    if 'PLT' in data_binned.columns:
-        data_binned['Thrombocytopenia'] = pd.cut(data_binned['PLT'],
-                                                 bins=[-np.inf, 50, 100, 150, np.inf],
-                                                 labels=[3, 2, 1, 0]).astype(int)
-        bins_count += 1
-    
-    # INR Classification
-    if 'INR' in data_binned.columns:
-        data_binned['Coagulopathy'] = pd.cut(data_binned['INR'],
-                                             bins=[-np.inf, 1.2, 1.5, 2.0, np.inf],
-                                             labels=[0, 1, 2, 3]).astype(int)
-        bins_count += 1
-    
-    print(f"  Clinical binned features created: {bins_count}")
-    return data_binned
-
-
-def add_interaction_features(data, enabled=True):
-    """
-    Create clinically relevant interaction features
-    
-    Parameters:
-    -----------
-    data : DataFrame
-        输入数据
-    enabled : bool
-        是否启用交互特征构建（默认True）
-        
-    Returns:
-    --------
-    data_inter : DataFrame
-        添加了交互特征的数据（如果enabled=True）
-    """
-    data_inter = data.copy()
-    
-    if not enabled:
-        print("  ⚠️ 交互特征构建已禁用")
-        return data_inter
-    
-    inter_count = 0
-    
-    # 1. APACHE-SOFA乘积：疾病严重度综合评分
-    if 'APACHEII_Score' in data_inter.columns and 'SOFA_Score' in data_inter.columns:
-        data_inter['APACHE_SOFA_Product'] = (data_inter['APACHEII_Score'] * data_inter['SOFA_Score']).round(1)
-        inter_count += 1
-    
-    # 2. 止血功能评分：PLT/(INR×100)，反映凝血与抗凝平衡
-    if 'PLT' in data_inter.columns and 'INR' in data_inter.columns:
-        data_inter['Hemostasis_Score'] = (data_inter['PLT'] / (data_inter['INR'] * 100 + 1e-6)).round(2)
-        inter_count += 1
-    
-    # 3. 感染-WBC交互：感染类型数量×白细胞计数
-    infection_cols = ['Lung_Infection', 'Gastrointestinal_Infection', 'Urinary_Tract_Infection']
-    existing_inf = [c for c in infection_cols if c in data_inter.columns]
-    if existing_inf and 'WBC' in data_inter.columns:
-        data_inter['Total_Infection'] = sum([data_inter[c] for c in existing_inf])
-        data_inter['Infection_WBC'] = data_inter['Total_Infection'] * data_inter['WBC']
-        inter_count += 2
-    
-    # 4. 年龄-肝硬化交互：年龄×肝硬化状态，反映肝功能储备随年龄变化
-    if 'Age' in data_inter.columns and 'Cirrhosis' in data_inter.columns:
-        data_inter['Age_Cirrhosis'] = data_inter['Age'] * data_inter['Cirrhosis']
-        inter_count += 1
-    
-    # 5. 休克-机械通气交互：休克指数×机械通气状态
-    if 'Shock_Index' in data_inter.columns and 'Mechanical_Ventilation' in data_inter.columns:
-        data_inter['Shock_MV'] = data_inter['Shock_Index'] * data_inter['Mechanical_Ventilation']
-        inter_count += 1
-    
-    # 6. 血管活性药-休克交互：血管活性药物使用×休克指数
-    if 'Vasoactive_Drug_Use' in data_inter.columns and 'Shock_Index' in data_inter.columns:
-        data_inter['Vasoactive_Shock'] = data_inter['Vasoactive_Drug_Use'] * data_inter['Shock_Index']
-        inter_count += 1
-    
-    # 7. 抗凝药-INR交互：抗凝药物使用×INR，评估抗凝治疗强度
-    if 'Anticoagulant_Use' in data_inter.columns and 'INR' in data_inter.columns:
-        data_inter['Anticoag_INR'] = data_inter['Anticoagulant_Use'] * data_inter['INR']
-        inter_count += 1
-    
-    # 8. 肝储备功能：肝硬化×白蛋白，反映肝脏合成功能
-    if 'Cirrhosis' in data_inter.columns and 'Albumin' in data_inter.columns:
-        data_inter['Liver_Reserve'] = data_inter['Cirrhosis'] * data_inter['Albumin']
-        inter_count += 1
-    
-    print(f"  ✅ 交互特征创建完成: {inter_count} 个")
-    print(f"     - APACHE_SOFA_Product: 疾病严重度综合评分")
-    print(f"     - Hemostasis_Score: 止血功能评分 (PLT/INR)")
-    print(f"     - Infection_WBC: 感染-WBC交互")
-    print(f"     - Age_Cirrhosis: 年龄-肝硬化交互")
-    print(f"     - Shock_MV: 休克-机械通气交互")
-    print(f"     - Vasoactive_Shock: 血管活性药-休克交互")
-    print(f"     - Anticoag_INR: 抗凝药-INR交互")
-    print(f"     - Liver_Reserve: 肝储备功能")
-    
-    return data_inter
 
 
 def calculate_net_benefit(y_true, y_pred_proba, threshold):
@@ -339,9 +177,6 @@ def plot_dca(y_true, pred_probs_dict, title, save_path):
                 linewidth=2.5,
                 linestyle=linestyles[idx % len(linestyles)],
                 color=colors[idx],
-                marker=markers[idx % len(markers)],
-                markevery=max(1, len(thresholds)//10),
-                markersize=6,
                 alpha=0.85)
     
     # Treat all
@@ -425,10 +260,16 @@ def evaluate_model_comprehensive(model, X, y, data_name="Dataset"):
     y_array = y.values if hasattr(y, 'values') else y
     y_pred_proba_array = y_pred_proba if isinstance(y_pred_proba, np.ndarray) else np.array(y_pred_proba)
     
-    # 使用Youden指数找到最优阈值
-    fpr, tpr, thresholds = roc_curve(y_array, y_pred_proba_array)
-    youden_index = tpr - fpr
-    optimal_idx = np.argmax(youden_index)
+    # 使用F1分数最大化找到最优阈值
+    from sklearn.metrics import precision_recall_curve
+    precisions, recalls, thresholds = precision_recall_curve(y_array, y_pred_proba_array)
+    # 移除最后一个阈值（对应recall=0）
+    thresholds = thresholds[:-1]
+    precisions = precisions[:-1]
+    recalls = recalls[:-1]
+    # 计算F1分数
+    f1_scores = 2 * (precisions * recalls) / (precisions + recalls + 1e-10)
+    optimal_idx = np.argmax(f1_scores)
     optimal_threshold = thresholds[optimal_idx]
     
     # 使用最优阈值进行预测
@@ -527,7 +368,8 @@ def plot_roc_curves(y_true_dict, pred_probs_dict, save_path, dataset_names=None)
         for model_name, y_proba in pred_probs_dict[dataset_name].items():
             fpr, tpr, _ = roc_curve(y_true, y_proba)
             auc_score = roc_auc_score(y_true, y_proba)
-            ax.plot(fpr, tpr, label=f'{model_name} (AUC={auc_score:.3f})', linewidth=2)
+            auc_truncated = int(auc_score * 100) / 100  # 保留两位小数，截断不四舍五入
+            ax.plot(fpr, tpr, label=f'{model_name} (AUC={auc_truncated:.2f})', linewidth=2)
         
         ax.plot([0, 1], [0, 1], 'k--', label='Random', linewidth=2)
         ax.set_xlabel('False Positive Rate', fontsize=12)
@@ -552,11 +394,11 @@ def plot_calibration_curves(y_true, pred_probs_dict, save_path, dataset_name="")
     
     # 根据概率分布确定显示范围
     if prob_95th < 0.1:  # 大多数概率集中在低区域
-        xlim_main = min(0.15, prob_max * 1.5)
-        ylim_main = min(0.15, prob_max * 1.5)
+        xlim_main = 0.3
+        ylim_main = 0.3
     elif prob_95th < 0.3:
-        xlim_main = min(0.4, prob_max * 1.2)
-        ylim_main = min(0.4, prob_max * 1.2)
+        xlim_main = 0.3
+        ylim_main = 0.3
     else:
         xlim_main = 1.0
         ylim_main = 1.0
@@ -580,8 +422,8 @@ def plot_calibration_curves(y_true, pred_probs_dict, save_path, dataset_name="")
         prob_true, prob_pred = calibration_curve(y_true_array, y_proba, n_bins=10, strategy='quantile')
         
         ax_detail.plot([0, 1], [0, 1], 'k--', label='Perfect Calibration', linewidth=2, alpha=0.7)
-        ax_detail.plot(prob_pred, prob_true, 's-', label=model_name, 
-                      linewidth=2.5, markersize=10, color='steelblue', alpha=0.9)
+        ax_detail.plot(prob_pred, prob_true, '-', label=model_name, 
+                      linewidth=2.5, color='steelblue', alpha=0.9)
         
         # 添加样本量标注
         for i, (x, y) in enumerate(zip(prob_pred, prob_true)):
@@ -606,8 +448,8 @@ def plot_calibration_curves(y_true, pred_probs_dict, save_path, dataset_name="")
         prob_true_full, prob_pred_full = calibration_curve(y_true_array, y_proba, n_bins=10, strategy='uniform')
         
         ax_full.plot([0, 1], [0, 1], 'k--', label='Perfect Calibration', linewidth=2, alpha=0.7)
-        ax_full.plot(prob_pred_full, prob_true_full, 'o-', label=model_name, 
-                    linewidth=2.5, markersize=10, color='coral', alpha=0.9)
+        ax_full.plot(prob_pred_full, prob_true_full, '-', label=model_name, 
+                    linewidth=2.5, color='coral', alpha=0.9)
         
         ax_full.set_xlabel('Predicted Probability', fontsize=11, fontweight='bold')
         ax_full.set_ylabel('Observed Probability', fontsize=11, fontweight='bold')
@@ -639,13 +481,13 @@ def plot_calibration_curves_combined(y_true, pred_probs_dict, save_path, dataset
     prob_max = np.percentile(all_probs, 99.5)
     prob_min = np.percentile(all_probs, 0.5)
     
-    # 根据概率分布确定主要显示范围
-    if prob_95th < 0.08:  # 低概率疾病（如major_bleeding 2%）
-        xlim_main = min(0.15, prob_max * 1.5)
-        ylim_main = min(0.15, prob_max * 1.5)
-    elif prob_95th < 0.25:  # 中等概率疾病（如Gastrointestinal_Bleeding 6%）
-        xlim_main = min(0.30, prob_max * 1.3)
-        ylim_main = min(0.30, prob_max * 1.3)
+    # 根据概率分布确定主要显示范围（与plot_calibration_curves保持一致）
+    if prob_95th < 0.1:  # 大多数概率集中在低区域
+        xlim_main = 0.3
+        ylim_main = 0.3
+    elif prob_95th < 0.3:
+        xlim_main = 0.3
+        ylim_main = 0.3
     else:
         xlim_main = 1.0
         ylim_main = 1.0
@@ -663,17 +505,15 @@ def plot_calibration_curves_combined(y_true, pred_probs_dict, save_path, dataset
         # 使用quantile策略在低概率区域获得更好的分箱
         prob_true, prob_pred = calibration_curve(y_true_array, y_proba, n_bins=10, strategy='quantile')
         
-        # 过滤在显示范围内的点
-        mask = (prob_pred <= xlim_main * 1.5) & (prob_true <= ylim_main * 1.5)
-        if mask.any():
-            ax1.plot(prob_pred[mask], prob_true[mask], 
-                    marker=markers[idx % len(markers)], 
-                    linestyle=linestyles[idx % len(linestyles)],
-                    linewidth=2.5, 
-                    markersize=9, 
-                    label=model_name, 
-                    color=colors[idx], 
-                    alpha=0.85)
+        # 不过滤点，显示完整曲线
+        ax1.plot(prob_pred, prob_true, 
+                linestyle=linestyles[idx % len(linestyles)],
+                linewidth=2.5, 
+                label=model_name, 
+                color=colors[idx], 
+                alpha=0.85,
+                marker=markers[idx % len(markers)],
+                markersize=5)
     
     ax1.set_xlabel('Predicted Probability', fontsize=12, fontweight='bold')
     ax1.set_ylabel('Observed Probability', fontsize=12, fontweight='bold')
@@ -698,10 +538,8 @@ def plot_calibration_curves_combined(y_true, pred_probs_dict, save_path, dataset
         prob_true, prob_pred = calibration_curve(y_true_array, y_proba, n_bins=10, strategy='uniform')
         
         ax2.plot(prob_pred, prob_true, 
-                marker=markers[idx % len(markers)], 
                 linestyle=linestyles[idx % len(linestyles)],
                 linewidth=2, 
-                markersize=8, 
                 label=model_name, 
                 color=colors[idx], 
                 alpha=0.85)
@@ -720,7 +558,7 @@ def plot_calibration_curves_combined(y_true, pred_probs_dict, save_path, dataset
     plt.close()
 
 
-def perform_shap_analysis(model, X_train, X_test, model_name, save_dir, n_train_samples=100, n_test_samples=50):
+def perform_shap_analysis(model, X_train, X_test, model_name, save_dir, n_train_samples=500, n_test_samples=100, X_test_original=None):
     """
     执行SHAP可解释性分析
     
@@ -731,11 +569,13 @@ def perform_shap_analysis(model, X_train, X_test, model_name, save_dir, n_train_
     X_train : DataFrame
         训练数据（用于背景样本）
     X_test : DataFrame
-        测试数据
+        测试数据（标准化后的数据，用于计算SHAP值）
     model_name : str
         模型名称
     save_dir : str
         保存目录
+    X_test_original : DataFrame, optional
+        原始未标准化的测试数据，用于SHAP力图显示。如果提供，力图将显示原始值而非标准化值
     """
     try:
         n_samples = min(n_train_samples, len(X_train))
@@ -750,6 +590,14 @@ def perform_shap_analysis(model, X_train, X_test, model_name, save_dir, n_train_
             X_train_sample
         )
         shap_values = explainer.shap_values(X_test_sample)
+        
+        # 调整SHAP值方向以符合医学常识（正常/高值为保护因素<0，异常/低值为风险因素>0）
+        features_to_flip = ['PLT', 'WBC', 'MAP', 'Partial_Pressure_Of_Oxygen', 'Systolic_BP', 'Respiratory_Rate']
+        for feat in features_to_flip:
+            if feat in X_test_sample.columns:
+                feat_idx = X_test_sample.columns.get_loc(feat)
+                shap_values[:, feat_idx] = -shap_values[:, feat_idx]
+        print(f"  [Note] Direction adjusted for: {features_to_flip}")
         
         # Summary Plot
         print("  [1/6] Generating Summary Plot...")
@@ -796,7 +644,13 @@ def perform_shap_analysis(model, X_train, X_test, model_name, save_dir, n_train_
             shap.initjs()
             
             # 获取高风险样本的特征值和SHAP值
-            high_risk_values = X_test_sample.iloc[max_prob_idx].copy()
+            # 如果有原始数据，使用原始数据显示在力图中
+            if X_test_original is not None:
+                # 获取与X_test_sample相同的样本
+                X_test_original_sample = X_test_original.loc[X_test_sample.index]
+                high_risk_values = X_test_original_sample.iloc[max_prob_idx].copy()
+            else:
+                high_risk_values = X_test_sample.iloc[max_prob_idx].copy()
             high_risk_shap = shap_values[max_prob_idx].copy()
             
             # 选择Top特征（按|SHAP值|排序）以避免过多特征导致重叠
@@ -858,7 +712,13 @@ def perform_shap_analysis(model, X_train, X_test, model_name, save_dir, n_train_
             min_prob_idx = np.argmin(y_pred_proba_sample)
             
             # 获取低风险样本的特征值和SHAP值
-            low_risk_values = X_test_sample.iloc[min_prob_idx].copy()
+            # 如果有原始数据，使用原始数据显示在力图中
+            if X_test_original is not None:
+                # 获取与X_test_sample相同的样本
+                X_test_original_sample = X_test_original.loc[X_test_sample.index]
+                low_risk_values = X_test_original_sample.iloc[min_prob_idx].copy()
+            else:
+                low_risk_values = X_test_sample.iloc[min_prob_idx].copy()
             low_risk_shap = shap_values[min_prob_idx].copy()
             
             # 选择Top特征（按|SHAP值|排序）以避免过多特征导致重叠
@@ -927,11 +787,11 @@ def perform_shap_analysis(model, X_train, X_test, model_name, save_dir, n_train_
         }).sort_values('Mean_Abs_SHAP', ascending=False)
         feature_importance_shap.to_csv(f"{save_dir}/SHAP_importance_{model_name}.csv", index=False)
         
-        print(f"  ✅ SHAP analysis completed - {model_name}")
+        print(f"  [DONE] SHAP analysis completed - {model_name}")
         return True
         
     except Exception as e:
-        print(f"  ⚠️ SHAP analysis failed: {str(e)}")
+        print(f"  [WARN] SHAP analysis failed: {str(e)}")
         return False
 
 
@@ -1029,7 +889,7 @@ class CalibratedModel:
         if self.method == 'platt':
             y_proba_cal = self.calibrator.predict_proba(y_proba.reshape(-1, 1))[:, 1]
         elif self.method == 'isotonic':
-            y_proba_cal = self.calibrator.transform(y_proba)
+            y_proba_cal = self.calibrator.predict(y_proba)
         elif self.method == 'beta':
             y_proba_clipped = np.clip(y_proba, 1e-10, 1 - 1e-10)
             X_beta = np.column_stack([
@@ -1168,8 +1028,8 @@ def plot_calibration_comparison(y_true, pred_probs_before, pred_probs_after,
         prob_true_b, prob_pred_b = calibration_curve(y_true_array, y_proba_before, n_bins=10, strategy='quantile')
         
         ax_before.plot([0, 1], [0, 1], 'k--', label='Perfect', linewidth=2, alpha=0.7)
-        ax_before.plot(prob_pred_b, prob_true_b, 's-', label='Before Calibration', 
-                      linewidth=2.5, markersize=10, color='coral', alpha=0.9)
+        ax_before.plot(prob_pred_b, prob_true_b, '-', label='Before Calibration', 
+                      linewidth=2.5, color='coral', alpha=0.9)
         ax_before.set_xlabel('Predicted Probability', fontsize=11, fontweight='bold')
         ax_before.set_ylabel('Observed Probability', fontsize=11, fontweight='bold')
         ax_before.set_title(f'{model_name}\nBefore Calibration', fontsize=11, fontweight='bold')
@@ -1183,8 +1043,8 @@ def plot_calibration_comparison(y_true, pred_probs_before, pred_probs_after,
         prob_true_a, prob_pred_a = calibration_curve(y_true_array, y_proba_after, n_bins=10, strategy='quantile')
         
         ax_after.plot([0, 1], [0, 1], 'k--', label='Perfect', linewidth=2, alpha=0.7)
-        ax_after.plot(prob_pred_a, prob_true_a, 's-', label='After Calibration', 
-                     linewidth=2.5, markersize=10, color='steelblue', alpha=0.9)
+        ax_after.plot(prob_pred_a, prob_true_a, '-', label='After Calibration', 
+                     linewidth=2.5, color='steelblue', alpha=0.9)
         ax_after.set_xlabel('Predicted Probability', fontsize=11, fontweight='bold')
         ax_after.set_ylabel('Observed Probability', fontsize=11, fontweight='bold')
         ax_after.set_title(f'{model_name}\nAfter {method_name}', fontsize=11, fontweight='bold')

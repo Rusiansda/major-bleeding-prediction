@@ -28,10 +28,22 @@ st.set_page_config(
 def load_model():
     """加载 XGBoost 模型（校准后用于预测，提取原始基学习器用于SHAP）"""
     # 加载校准模型（用于预测）
-    # 获取当前文件所在目录的父目录（项目根目录）
+    # 尝试多个路径（本地开发和部署环境）
     current_dir = os.path.dirname(os.path.abspath(__file__))
-    parent_dir = os.path.dirname(current_dir)
-    cal_model_path = os.path.join(parent_dir, "生成的文件_major_bleeding", "model_XGBoost_calibrated.pkl")
+    possible_paths = [
+        os.path.join(current_dir, "model_XGBoost_calibrated.pkl"),  # 同一目录
+        os.path.join(os.path.dirname(current_dir), "生成的文件_major_bleeding", "model_XGBoost_calibrated.pkl"),  # 本地开发
+    ]
+    
+    cal_model_path = None
+    for path in possible_paths:
+        if os.path.exists(path):
+            cal_model_path = path
+            break
+    
+    if cal_model_path is None:
+        raise FileNotFoundError(f"找不到模型文件，尝试的路径: {possible_paths}")
+    
     with open(cal_model_path, 'rb') as f:
         cal_model = pickle.load(f)
     
@@ -62,11 +74,29 @@ def load_scaler():
     """加载特征标准化器"""
     try:
         current_dir = os.path.dirname(os.path.abspath(__file__))
-        parent_dir = os.path.dirname(current_dir)
-        scaler_path = os.path.join(parent_dir, "生成的文件", "robust_scaler.pkl")
+        possible_paths = [
+            os.path.join(current_dir, "lasso_scaler_params.pkl"),  # LASSO专用scaler
+            os.path.join(current_dir, "robust_scaler.pkl"),  # 备用
+        ]
+        
+        scaler_path = None
+        for path in possible_paths:
+            if os.path.exists(path):
+                scaler_path = path
+                break
+        
+        if scaler_path is None:
+            st.sidebar.warning("找不到标准化器文件")
+            return None, []
+        
         with open(scaler_path, 'rb') as f:
             scaler_data = pickle.load(f)
-        return scaler_data['scaler'], scaler_data['continuous_vars']
+        
+        # 如果是lasso_scaler_params，直接返回参数
+        if 'lasso' in scaler_path.lower():
+            return scaler_data, list(scaler_data.keys())
+        else:
+            return scaler_data['scaler'], scaler_data['continuous_vars']
     except Exception as e:
         st.sidebar.warning(f"加载标准化器失败: {e}")
         return None, []
@@ -88,22 +118,33 @@ def scale_features(feature_values, feature_names, scaler, continuous_vars):
         'AG_Ratio', 'ALT'
     ]
     
+    # 判断scaler类型
+    is_lasso_scaler = isinstance(scaler, dict)
+    
     # 手动标准化
     for col_name in lasso_continuous_vars:
-        if col_name in feature_names and col_name in continuous_vars:
+        if col_name in feature_names:
             idx = feature_names.index(col_name)
-            col_idx_in_scaler = continuous_vars.index(col_name)
             
-            # RobustScaler: transformed = (X - median) / IQR
             try:
-                if hasattr(scaler, 'center_'):
-                    median = scaler.center_[col_idx_in_scaler]
+                if is_lasso_scaler:
+                    # 使用LASSO专用scaler参数
+                    if col_name in scaler:
+                        median = scaler[col_name]['median']
+                        iqr = scaler[col_name]['iqr']
+                        if iqr > 0:
+                            result[idx] = (feature_values[idx] - median) / iqr
                 else:
-                    median = scaler.quantile_[col_idx_in_scaler]
-                scale = scaler.scale_[col_idx_in_scaler]
-                
-                if scale > 0:
-                    result[idx] = (feature_values[idx] - median) / scale
+                    # 使用原始RobustScaler
+                    if col_name in continuous_vars:
+                        col_idx_in_scaler = continuous_vars.index(col_name)
+                        if hasattr(scaler, 'center_'):
+                            median = scaler.center_[col_idx_in_scaler]
+                        else:
+                            median = scaler.quantile_[col_idx_in_scaler]
+                        scale = scaler.scale_[col_idx_in_scaler]
+                        if scale > 0:
+                            result[idx] = (feature_values[idx] - median) / scale
             except Exception as e:
                 # 如果标准化失败，保持原值
                 pass
