@@ -30,45 +30,19 @@ def load_model():
     # 加载校准模型（用于预测）
     # 尝试多个路径（本地开发和部署环境）
     current_dir = os.path.dirname(os.path.abspath(__file__))
-    
-    # 获取当前工作目录（用于调试）
-    cwd = os.getcwd()
-    
     possible_paths = [
         os.path.join(current_dir, "model_XGBoost_calibrated.pkl"),  # 同一目录
-        os.path.join(cwd, "model_XGBoost_calibrated.pkl"),  # 当前工作目录
-        os.path.join(cwd, "deploy", "model_XGBoost_calibrated.pkl"),  # deploy子目录
-        os.path.join(os.path.dirname(current_dir), "model_XGBoost_calibrated.pkl"),  # 父目录
         os.path.join(os.path.dirname(current_dir), "生成的文件_major_bleeding", "model_XGBoost_calibrated.pkl"),  # 本地开发
     ]
     
-    # 调试信息
-    debug_info = []
     cal_model_path = None
     for path in possible_paths:
-        exists = os.path.exists(path)
-        debug_info.append(f"{path}: {'存在' if exists else '不存在'}")
-        if exists and cal_model_path is None:
+        if os.path.exists(path):
             cal_model_path = path
+            break
     
     if cal_model_path is None:
-        # 列出当前目录内容以便调试
-        try:
-            files_in_cwd = os.listdir(cwd)
-            files_in_current = os.listdir(current_dir)
-        except:
-            files_in_cwd = []
-            files_in_current = []
-        
-        error_msg = f"""找不到模型文件。
-当前工作目录: {cwd}
-文件所在目录: {current_dir}
-尝试的路径:
-{chr(10).join(debug_info)}
-当前工作目录文件: {files_in_cwd}
-文件所在目录文件: {files_in_current}
-"""
-        raise FileNotFoundError(error_msg)
+        raise FileNotFoundError(f"找不到模型文件，尝试的路径: {possible_paths}")
     
     with open(cal_model_path, 'rb') as f:
         cal_model = pickle.load(f)
@@ -100,12 +74,8 @@ def load_scaler():
     """加载特征标准化器"""
     try:
         current_dir = os.path.dirname(os.path.abspath(__file__))
-        cwd = os.getcwd()
-        
         possible_paths = [
             os.path.join(current_dir, "lasso_scaler_params.pkl"),  # LASSO专用scaler
-            os.path.join(cwd, "lasso_scaler_params.pkl"),  # 当前工作目录
-            os.path.join(cwd, "deploy", "lasso_scaler_params.pkl"),  # deploy子目录
             os.path.join(current_dir, "robust_scaler.pkl"),  # 备用
         ]
         
@@ -116,7 +86,7 @@ def load_scaler():
                 break
         
         if scaler_path is None:
-            st.sidebar.warning("找不到标准化器文件，使用原始值")
+            st.sidebar.warning("找不到标准化器文件")
             return None, []
         
         with open(scaler_path, 'rb') as f:
@@ -128,7 +98,7 @@ def load_scaler():
         else:
             return scaler_data['scaler'], scaler_data['continuous_vars']
     except Exception as e:
-        st.sidebar.warning(f"加载标准化器失败: {e}，使用原始值")
+        st.sidebar.warning(f"加载标准化器失败: {e}")
         return None, []
 
 
