@@ -347,9 +347,6 @@ def main():
         return
     
     # 侧边栏信息
-    st.sidebar.header("⚙️ 模型信息")
-    st.sidebar.info("当前模型: XGBoost (最佳模型)")
-    st.sidebar.info("验证集性能:\n- AUC: 0.910\n- 敏感度: 36.6%\n- 特异度: 98.3%\n- NPV: 98.7%")
     
     with st.sidebar.expander("📖 使用说明"):
         st.markdown("""
